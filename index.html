@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Кейтопедия — словарь наших мудростей и затупов</title>
+  <meta name="description" content="Кейтопедия: определения, мудрости и кейторизмы, рождённые в живых беседах.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%238b5cf6'/><text x='32' y='45' font-size='34' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'>К</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Фоновые блобы -->
+  <div class="bg" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- Шапка -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <button class="logo" id="logoBtn" title="Кейтопедия — на главную">
+        <span class="logo-icon">К</span>
+        <span class="logo-text">Кейто<span class="grad">педия</span></span>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Герой: фото-сцена -->
+    <section class="hero">
+      <div class="hero-card">
+        <div class="hero-bg" aria-hidden="true">
+          <img src="assets/photos/hall-1.jpg" alt="">
+        </div>
+        <div class="hero-tint" aria-hidden="true"></div>
+
+        <div class="hero-inner">
+          <h1>Словарь наших мудростей и затупов, копившийся годами</h1>
+          <p class="hero-sub" id="typed" data-text="Определения, кейторизмы, штуки, перлы, тупняки, запреты и рубрика «Я мадама» — всё, что мы наговорили."></p>
+
+          <div class="hero-stats" id="stats"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Сегмент-контрол разделов -->
+    <section class="chipbar">
+      <div class="segwrap" id="segWrap">
+        <div class="seg-pill" id="segPill" aria-hidden="true"></div>
+        <!-- сегменты добавит app.js -->
+      </div>
+    </section>
+
+    <!-- Карточки -->
+    <section class="cards" id="cards" aria-live="polite"></section>
+
+    <!-- Пусто -->
+    <div class="empty" id="emptyState" hidden>
+      <div class="empty-emoji">🫥</div>
+      <p>Ничего не найдено. Такой книги у нас пока нет.</p>
+      <button class="btn btn-ghost" id="resetBtn">Сбросить фильтры</button>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>Кейтопедия © <span id="year"></span> — написана друзьями, зачитана вслух.</p>
+      <p class="footer-note">Собрано из заметок в телефоне. Ляпы сохранены в оригинале.</p>
+    </div>
+  </footer>
+
+  <!-- Модальное окно -->
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal panel-gradient" role="dialog" aria-modal="true" aria-label="Запись словаря">
+      <button class="modal-close" id="modalClose" aria-label="Закрыть">×</button>
+      <div id="modalContent"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modalCopy">📋 Скопировать</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

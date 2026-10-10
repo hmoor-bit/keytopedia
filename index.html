@@ -112,10 +112,22 @@
     </div>
   </div>
 
+  <!-- Диалог подтверждения -->
+  <div class="modal-backdrop confirm-backdrop" id="confirmBackdrop" hidden>
+    <div class="modal confirm-modal panel-gradient" role="dialog" aria-modal="true" aria-label="Подтверждение">
+      <div class="confirm-icon">❓</div>
+      <div class="confirm-text" id="confirmText">Добавить новую запись?</div>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost confirm-btn" id="confirmCancel">Отмена</button>
+        <button class="btn btn-primary confirm-btn" id="confirmOk">✅ Добавить</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
-  <script src="site-config.js?v=1"></script>
-  <script src="data.js?v=2"></script>
-  <script src="app.js?v=2"></script>
+  <script src="site-config.js?v=2"></script>
+  <script src="data.js?v=3"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>

@@ -758,6 +758,11 @@ const KEITO_DATA = {
       "author": "Линк"
     },
     {
+      "term": "Тест существующий раздел",
+      "section": "stuki",
+      "num": "1"
+    },
+    {
       "section": "perly",
       "num": "1",
       "term": "Количество автоматов на квадратный метр",

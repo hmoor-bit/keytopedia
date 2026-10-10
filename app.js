@@ -622,58 +622,83 @@ function closeAddDialog() {
   document.body.style.overflow = "";
 }
 
+/* Красивое подтверждение по центру экрана. Promise<boolean> */
+function showConfirm(text) {
+  return new Promise((resolve) => {
+    const bd = $("#confirmBackdrop");
+    const ok = $("#confirmOk");
+    const cancel = $("#confirmCancel");
+    $("#confirmText").textContent = text;
+    bd.hidden = false;
+
+    const finish = (value) => {
+      bd.hidden = true;
+      ok.onclick = null;
+      cancel.onclick = null;
+      bd.onclick = null;
+      resolve(value);
+    };
+
+    ok.onclick = () => finish(true);
+    cancel.onclick = () => finish(false);
+    bd.onclick = (ev) => { if (ev.target === bd) finish(false); };
+  });
+}
+
 function handleAddSubmit(ev) {
   ev.preventDefault();
+  (async () => {
+    const raw = { term: $("#addTerm").value.trim() };
+    if (!raw.term) return;
+    const inputName = $("#addSection").value.trim();
+    if (!inputName) return;
+    const text = $("#addText").value.trim();
+    const author = $("#addAuthor").value.trim();
+    if (text) raw.text = text;
+    if (author) raw.author = author;
 
-  const raw = { term: $("#addTerm").value.trim() };
-  if (!raw.term) return;
-  const inputName = $("#addSection").value.trim();
-  if (!inputName) return;
-  const text = $("#addText").value.trim();
-  const author = $("#addAuthor").value.trim();
-  if (text) raw.text = text;
-  if (author) raw.author = author;
+    const ok = await showConfirm("Добавить новую запись?");
+    if (!ok) return;
 
-  if (!window.confirm("Добавить новую запись?")) return;
+    // Раздел: существующий по названию или новый
+    const byName = new Map(KEITO_DATA.sections.map((s) => [s.name.toLowerCase(), s]));
+    const existing = byName.get(inputName.toLowerCase());
+    if (existing) {
+      raw.section = existing.id;
+    } else {
+      // новый раздел — в конец списка
+      const icon = "🗂️";
+      const section = {
+        id: "s" + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36),
+        name: inputName,
+        icon: icon,
+      };
+      KEITO_DATA.sections.push(section);
+      raw.section = section.id;
+    }
 
-  // Раздел: существующий по названию или новый
-  const byName = new Map(KEITO_DATA.sections.map((s) => [s.name.toLowerCase(), s]));
-  const existing = byName.get(inputName.toLowerCase());
-  if (existing) {
-    raw.section = existing.id;
-  } else {
-    // новый раздел — в конец списка
-    const icon = "🗂️";
-    const section = {
-      id: "s" + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36),
-      name: inputName,
-      icon: icon,
-    };
-    KEITO_DATA.sections.push(section);
-    raw.section = section.id;
-  }
+    rebuildDerivedData(); // после возможного создания раздела
 
-  rebuildDerivedData(); // после возможного создания раздела
+    raw.num = nextNumFor(raw.section, raw.author);
 
-  raw.num = nextNumFor(raw.section, raw.author);
+    // вставляем сразу после последней записи этого раздела
+    const secs = KEITO_DATA.entries.map((x) => x.section);
+    KEITO_DATA.entries.splice(secs.lastIndexOf(raw.section) + 1, 0, raw);
 
-  // вставляем сразу после последней записи этого раздела
-  const secs = KEITO_DATA.entries.map((x) => x.section);
-  KEITO_DATA.entries.splice(secs.lastIndexOf(raw.section) + 1, 0, raw);
+    // запоминаем для перезагрузок (localStorage) и экспорта data.js
+    customEntries.push(raw);
+    saveCustomEntries(customEntries);
 
-  // запоминаем для перезагрузок (localStorage) и экспорта data.js
-  customEntries.push(raw);
-  saveCustomEntries(customEntries);
+    // добавляем в кэш-копию для рендера
+    entries.push(Object.assign(Object.assign({}, raw), { id: "e" + (entries.length + 1) }));
 
-  // добавляем в кэш-копию для рендера
-  entries.push(Object.assign(Object.assign({}, raw), { id: "e" + (entries.length + 1) }));
-
-  closeAddDialog();
-  toast("✅ Запись добавлена");
-  state.section = raw.section; // показать раздел с новой записью
-  renderAll();
-  lastSavedNote = raw.term;
-  persistData();               // авто-сохранение в data.js + GitHub
+    closeAddDialog();
+    toast("✅ Запись добавлена");
+    state.section = raw.section; // показать раздел с новой записью
+    renderAll();
+    lastSavedNote = raw.term;
+    persistData();               // авто-сохранение в data.js + GitHub
+  })();
 }
 
 function dataFileContent() {
@@ -851,6 +876,7 @@ function renderAll() {
 function bindEvents() {
   document.addEventListener("keydown", (ev) => {
     if (ev.key === "Escape") {
+      if (!$("#confirmBackdrop").hidden) { $("#confirmCancel").click(); return; }
       if (!$("#modalBackdrop").hidden) closeModal();
       if (!$("#addBackdrop").hidden) closeAddDialog();
     }

@@ -725,6 +725,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   gap: 2px;
 }
 
+.combo-menu[hidden] { display: none; }
+
 .combo-item {
   display: flex;
   align-items: center;

@@ -67,9 +67,21 @@ const KEITO_DATA = {
       "id": "madama",
       "name": "Я мадама",
       "icon": "👑"
+    },
+    {
+      "id": "smv26l343lm",
+      "name": "Тестовый раздел",
+      "icon": "🗂️"
     }
   ],
   "entries": [
+    {
+      "term": "Что-то новое",
+      "text": "1111",
+      "author": "я",
+      "section": "smv26l343lm",
+      "num": "1"
+    },
     {
       "section": "definitions",
       "num": "1",

@@ -209,6 +209,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .logo-text { font-size: 20px; font-weight: 750; letter-spacing: -0.2px; }
 
+.header-note {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--muted);
+  text-align: right;
+}
+
 .grad {
   background: var(--grad);
   -webkit-background-clip: text;
@@ -545,6 +554,148 @@ button { font: inherit; color: inherit; cursor: pointer; }
   color: hsl(28, 68%, 36%);
 }
 
+/* плашка «Штуки»: все штуки человека на одной карточке */
+.stuki-card { cursor: pointer; }
+
+.stuki-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.stuki-tag {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(28, 55%, 32%);
+  background: hsl(28, 45%, 93%);
+  border: 1px solid hsl(28, 35%, 84%);
+  border-radius: 999px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.stuki-tag:hover {
+  background: hsl(28, 65%, 88%);
+  transform: translateY(-1px);
+}
+
+.stuki-tag:active { transform: translateY(0); }
+
+/* список штук человека в модалке */
+.stuki-modal-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stuki-modal-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  padding: 9px 14px;
+  border: 1px solid hsl(28, 35%, 84%);
+  border-radius: 12px;
+  background: hsl(28, 45%, 93%);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.stuki-modal-item:hover { background: hsl(28, 65%, 88%); }
+
+.stuki-modal-num {
+  color: #a89a86;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+}
+
+.stuki-modal-text { font-size: 14.5px; color: hsl(28, 55%, 28%); }
+
+/* ---------- Кнопки «+» и «💾» ---------- */
+
+.chipbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.add-btn {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 999px;
+  border: 1px solid hsl(28, 40%, 80%);
+  background: hsl(28, 60%, 91%);
+  color: hsl(28, 55%, 30%);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.add-btn:hover {
+  background: hsl(28, 72%, 86%);
+  transform: translateY(-1px);
+}
+
+.add-btn:active { transform: translateY(0); }
+
+.add-btn-disk { font-size: 17px; }
+
+/* ---------- Форма добавления записи ---------- */
+
+.add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.add-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: left;
+}
+
+.add-form input,
+.add-form textarea,
+.add-form select {
+  font: inherit;
+  font-size: 14.5px;
+  padding: 9px 13px;
+  border: 1px solid hsl(28, 35%, 84%);
+  border-radius: 10px;
+  background: hsl(28, 45%, 93%);
+  color: inherit;
+  resize: vertical;
+}
+
+.add-form input:focus,
+.add-form textarea:focus,
+.add-form select:focus {
+  outline: 2px solid hsl(28, 60%, 80%);
+}
+
+.btn-add-submit {
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
 /* появление карточек */
 .reveal {
   opacity: 0;
@@ -628,6 +779,162 @@ button { font: inherit; color: inherit; cursor: pointer; }
   white-space: pre-wrap;
 }
 
+/* ---------- Диаграммы состава «Я» ---------- */
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin: 18px 0 4px;
+}
+
+.chart-card {
+  background: var(--panel-2);
+  border: 1px solid rgba(120, 96, 60, 0.12);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.donut { width: 132px; height: 132px; }
+
+.donut-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  fill: var(--text);
+}
+
+.donut-sub {
+  font-family: var(--font-ui);
+  font-size: 8.5px;
+  fill: var(--muted);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  font-size: 13px;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2.5px 0;
+}
+
+.legend .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label { flex: 1; color: var(--text); }
+
+.legend li.shared .legend-label { font-weight: 700; }
+
+.legend-val {
+  color: var(--muted);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Шкала мразотности ---------- */
+
+.mraz-list {
+  margin: 18px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 18px;
+  background: var(--panel-2);
+  border: 1px solid rgba(120, 96, 60, 0.12);
+  border-radius: 14px;
+}
+
+.mraz-row {
+  display: grid;
+  grid-template-columns: 92px 1fr 150px;
+  align-items: center;
+  gap: 10px;
+}
+
+.mraz-name { font-weight: 700; font-size: 14px; white-space: nowrap; }
+
+.mraz-track {
+  height: 16px;
+  border-radius: 9px;
+  background: rgba(120, 96, 60, 0.12);
+  overflow: hidden;
+}
+
+.mraz-fill {
+  height: 100%;
+  border-radius: 9px;
+  background: var(--grad);
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.mraz-fill.mraz-leap {
+  background: repeating-linear-gradient(45deg, #d3a53a, #d3a53a 6px, #f3dfae 6px, #f3dfae 12px);
+}
+
+.mraz-val { color: var(--muted); font-size: 13px; text-align: right; font-weight: 600; }
+
+.mraz-note {
+  margin: 10px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(120, 96, 60, 0.25);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- Ассоциативные облака ---------- */
+
+.assoc-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.assoc-note b { color: var(--text); }
+
+.assoc-card { gap: 8px; }
+
+.assoc-name {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 400;
+}
+
+.chips-wrap { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.assoc-chip {
+  padding: 5px 12px;
+  border-radius: 980px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  background: hsl(var(--h), 55%, 93%);
+  color: hsl(var(--h), 58%, 28%);
+  transition: transform 0.15s, background 0.2s, color 0.2s;
+}
+
+.assoc-chip:hover { transform: translateY(-1px) scale(1.03); }
+
+.assoc-chip.shared {
+  background: hsl(var(--h), 66%, 40%);
+  color: #fffdf8;
+  box-shadow: 0 3px 10px hsla(var(--h), 66%, 40%, 0.35);
+}
+
 .modal-actions {
   margin-top: 24px;
   display: flex;
@@ -679,6 +986,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   .hero-card { padding: 40px 22px; min-height: 330px; }
   .btn-primary { padding: 9px 15px; font-size: 14px; }
   .seg-item { padding: 8px 12px; font-size: 13px; gap: 5px; }
+  .header-note { display: none; }
   .modal { padding: 24px 18px; }
 }
 

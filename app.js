@@ -524,7 +524,7 @@ function toast(msg) {
   el.textContent = msg;
   el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (el.hidden = true), 1900);
+  toastTimer = setTimeout(() => (el.hidden = true), 3000);
 }
 
 /* ---------- Эффект печатной машинки ---------- */
@@ -781,10 +781,6 @@ async function persistData() {
   toast("⚠️ Нет связи с GitHub. Запись временно хранится в браузере");
 }
 
-function exportData() {
-  persistData();
-}
-
 /* ---------- Свежие данные с GitHub при загрузке ---------- */
 
 /* data.js генерируется в строгом формате «шапка + const KEITO_DATA = {...};» */
@@ -848,7 +844,6 @@ function bindEvents() {
     if (ev.target === $("#addBackdrop")) closeAddDialog();
   });
   $("#addForm").addEventListener("submit", handleAddSubmit);
-  $("#exportBtn").onclick = exportData;
 
   const reset = () => {
     state.section = "all";

@@ -706,6 +706,10 @@ function bindSectionCombo() {
 
   inp.addEventListener("focus", () => renderSectionMenu());
   inp.addEventListener("input", () => renderSectionMenu());
+  inp.addEventListener("click", (ev) => {
+    ev.stopPropagation();          // не даём внешнему обработчику закрыть меню
+    if (!sectionMenuOpen()) renderSectionMenu();
+  });
 
   inp.addEventListener("keydown", (ev) => {
     if (!sectionMenuOpen()) return;

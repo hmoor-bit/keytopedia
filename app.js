@@ -627,14 +627,16 @@ function handleAddSubmit(ev) {
 
   const raw = { term: $("#addTerm").value.trim() };
   if (!raw.term) return;
+  const inputName = $("#addSection").value.trim();
+  if (!inputName) return;
   const text = $("#addText").value.trim();
   const author = $("#addAuthor").value.trim();
   if (text) raw.text = text;
   if (author) raw.author = author;
 
+  if (!window.confirm("Добавить новую запись?")) return;
+
   // Раздел: существующий по названию или новый
-  const inputName = $("#addSection").value.trim();
-  if (!inputName) return;
   const byName = new Map(KEITO_DATA.sections.map((s) => [s.name.toLowerCase(), s]));
   const existing = byName.get(inputName.toLowerCase());
   if (existing) {
@@ -650,8 +652,6 @@ function handleAddSubmit(ev) {
     KEITO_DATA.sections.push(section);
     raw.section = section.id;
   }
-
-  if (!window.confirm("Добавить новую запись?")) return;
 
   rebuildDerivedData(); // после возможного создания раздела
 

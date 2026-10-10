@@ -41,15 +41,34 @@ const entries = KEITO_DATA.entries.map((e, i) => ({
   id: "e" + (i + 1),
 }));
 
-const sectionById = new Map(KEITO_DATA.sections.map((s) => [s.id, s]));
+let sectionById = new Map(KEITO_DATA.sections.map((s) => [s.id, s]));
 
 // Оттенок бейджа раздела: тёплая янтарно-кремовая гамма
-const sectionHue = (() => {
+let sectionHue = (() => {
   const map = new Map();
   const warm = [34, 20, 42, 12, 38, 26, 16, 44, 30, 46];
   KEITO_DATA.sections.forEach((s, i) => map.set(s.id, warm[i % warm.length]));
   return map;
 })();
+
+// Пересобрать производные структуры после подгрузки свежих данных с GitHub
+function rebuildDerivedData() {
+  entries.length = 0;
+  KEITO_DATA.entries.forEach((e, i) => {
+    entries.push({
+      ...e,
+      num: e.num != null ? String(e.num) : String(i + 1),
+      id: "e" + (i + 1),
+    });
+  });
+  sectionById = new Map(KEITO_DATA.sections.map((s) => [s.id, s]));
+  sectionHue = (() => {
+    const map = new Map();
+    const warm = [34, 20, 42, 12, 38, 26, 16, 44, 30, 46];
+    KEITO_DATA.sections.forEach((s, i) => map.set(s.id, warm[i % warm.length]));
+    return map;
+  })();
+}
 
 // Пул для «Мне повезёт»: только кейторизмы и мудрости // удалено
 
@@ -646,60 +665,159 @@ function dataFileContent() {
 
 var lastSavedNote = ""; // попадёт в комментарий коммита GitHub
 
-/* Попытка отправить текущие данные в файл data.js через локальный сервер.
-   Если сервер не запущен (страница открыта через file://) — тихо откатываемся
-   к сохранению в браузере и кнопке «💾». */
-async function saveDataToServer() {
+/* ---------- Отправка данных: GitHub API (работает с любого устройства) ---------- */
+
+function githubCfg() {
+  const c = window.KEITO_GITHUB_CONFIG;
+  return (c && c.repo && c.token) ? c : null;
+}
+
+function b64encodeUtf8(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function b64decodeUtf8(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+/* Коммит одного файла в репозиторий. Если на GitHub уже такое же содержимое — не создаёт коммит. */
+async function pushDirectToGitHub(cfg, content, message) {
+  const filePath = cfg.path || "data.js";
+  const api = "https://api.github.com/repos/" + cfg.repo + "/contents/" + filePath
+    + (cfg.branch ? "?ref=" + encodeURIComponent(cfg.branch) : "");
+  const headers = {
+    Authorization: "Bearer " + cfg.token,
+    Accept: "application/vnd.github+json",
+    "User-Agent": "keitopedia-site",
+  };
+
+  let sha = null;
+  const res = await fetch(api, { headers, cache: "no-store" });
+  if (res.ok) {
+    const info = await res.json();
+    sha = info.sha;
+    if (info.content && b64decodeUtf8(info.content) === content) {
+      return { pushed: true, same: true }; // на GitHub уже актуально
+    }
+  } else if (res.status !== 404) {
+    throw new Error("HTTP " + res.status);
+  }
+
+  const body = {
+    message: message,
+    content: b64encodeUtf8(content),
+    branch: cfg.branch || "main",
+  };
+  if (sha) body.sha = sha;
+
+  const put = await fetch("https://api.github.com/repos/" + cfg.repo + "/contents/" + filePath, {
+    method: "PUT",
+    headers: Object.assign({ "Content-Type": "application/json; charset=utf-8" }, headers),
+    body: JSON.stringify(body),
+  });
+  if (!put.ok) throw new Error("HTTP " + put.status);
+  return { pushed: true };
+}
+
+/* Локальный сервер пригоден, когда сайт открыт через него */
+function serverSaveAvailable() {
+  return location.protocol === "http:" && (location.hostname === "localhost" || location.hostname === "127.0.0.1");
+}
+
+async function saveViaServer(content, note) {
   const res = await fetch("/api/save-data", {
     method: "POST",
     headers: {
       "Content-Type": "text/plain;charset=utf-8",
-      "X-Keito-Note": lastSavedNote ? encodeURIComponent(lastSavedNote) : "auto-save",
+      "X-Keito-Note": note ? encodeURIComponent(note) : "auto-save",
     },
-    body: dataFileContent(),
+    body: content,
   });
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
 
-function persistData() {
-  saveDataToServer()
-    .then((info) => {
-      // записи теперь в файле — чтобы не задвоились при следующей загрузке
-      customEntries.length = 0;
-      saveCustomEntries(customEntries);
+function markSavedInFile() {
+  // записи теперь в файле — чтобы не задвоились при следующей загрузке
+  customEntries.length = 0;
+  saveCustomEntries(customEntries);
+}
+
+async function persistData() {
+  const content = dataFileContent();
+  const note = lastSavedNote;
+
+  // 1) Локальный сервер, если сайт открыт через него: бэкапы на диске
+  if (serverSaveAvailable()) {
+    try {
+      const info = await saveViaServer(content, note);
+      markSavedInFile();
       if (info.pushed) toast("💾 Сохранено в data.js и отправлено на GitHub");
-      else if (info.reason === "не настроен") toast("💾 Сохранено в data.js (GitHub ещё не настроен)");
-      else toast("💾 Сохранено в data.js, но GitHub не принял: " + info.reason);
-    })
-    .catch(() => {
-      toast("⚠️ Запись добавлена. Сервер не запущен (start.bat) — пока хранится только в браузере");
-    });
+      else if (info.reason === "не настроен") toast("💾 Сохранено в data.js (бэкап — в data-backups)");
+      else toast("💾 Записано в data.js, но GitHub не принял: " + info.reason);
+      return;
+    } catch { /* сервер недоступен — попробуем напрямую ниже */ }
+  }
+
+  // 2) Напрямую GitHub — работает с сайта, открытого с любого устройства
+  const cfg = githubCfg();
+  if (cfg) {
+    try {
+      const message = note ? "Кейтопедия: " + note : "Кейтопедия: обновление данных";
+      const push = await pushDirectToGitHub(cfg, content, message);
+      markSavedInFile();
+      toast(push.same ? "💾 Данные на GitHub уже актуальны" : "💾 Записано в GitHub (data.js обновлён)");
+      return;
+    } catch { /* ниже — последний резерв */ }
+  }
+
+  // 3) Ничего не сработало — запись остаётся в браузере до следующего раза
+  toast("⚠️ Нет связи с GitHub. Запись временно хранится в браузере");
 }
 
 function exportData() {
-  saveDataToServer()
-    .then((info) => {
-      customEntries.length = 0;
-      saveCustomEntries(customEntries);
-      if (info.pushed) toast("💾 Сохранено в data.js и отправлено на GitHub");
-      else if (info.reason === "не настроен") toast("💾 Сохранено в data.js (GitHub ещё не настроен)");
-      else toast("💾 Сохранено в data.js, но GitHub не принял: " + info.reason);
-    })
-    .catch(() => {
-      // сервер недоступен — скачиваем файл, как раньше
-      const blob = new Blob([dataFileContent()], { type: "text/javascript;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "data.js";
-      a.click();
-      URL.revokeObjectURL(url);
+  persistData();
+}
 
-      customEntries.length = 0;
-      saveCustomEntries(customEntries);
-      toast("💾 data.js скачан — замени им старый файл в папке сайта");
-    });
+/* ---------- Свежие данные с GitHub при загрузке ---------- */
+
+/* data.js генерируется в строгом формате «шапка + const KEITO_DATA = {...};» */
+function parseKeitoDataText(text) {
+  const m = text.match(/^\/\*[\s\S]*?\*\/\s*\n\nconst KEITO_DATA = ([\s\S]*);\s*$/);
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch { return null; }
+}
+
+function applyKeitoData(data) {
+  if (!data || !Array.isArray(data.entries)) return false;
+  KEITO_DATA.meta = data.meta || KEITO_DATA.meta;
+  if (Array.isArray(data.sections)) KEITO_DATA.sections = data.sections;
+  KEITO_DATA.entries.length = 0;
+  KEITO_DATA.entries.push(...data.entries);
+  rebuildDerivedData();
+  renderAll();
+  return true;
+}
+
+let lastRefreshAt = 0;
+
+async function refreshFromGitHub(silent) {
+  const cfg = githubCfg();
+  if (!cfg || Date.now() - lastRefreshAt < 30000) return; // не чаще раза в 30 секунд
+  try {
+    const url = "https://raw.githubusercontent.com/" + cfg.repo + "/" + (cfg.branch || "main")
+      + "/" + (cfg.path || "data.js") + "?t=" + Date.now();
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = parseKeitoDataText(await res.text());
+    if (applyKeitoData(data)) lastRefreshAt = Date.now();
+  } catch { /* нет связи — остаёмся на загруженной версии */ }
 }
 
 /* ---------- Сборка ---------- */
@@ -746,6 +864,18 @@ function init() {
   bindEvents();
   pointerGlow();
   renderAll();
+
+  // если накопились неотправленные записи — дожимаем на GitHub
+  if (customEntries.length) { lastSavedNote = ""; persistData(); }
+
+  // свежие данные с GitHub, чтобы видеть записи, добавленные с других устройств
+  refreshFromGitHub().then(() => {
+    if (githubCfg()) {
+      window.addEventListener("focus", () => {
+        if (Date.now() - lastRefreshAt > 60000) refreshFromGitHub(true); // при возврате на вкладку
+      });
+    }
+  });
 
   // ширины сегментов меняются после загрузки шрифтов — пересчитываем таблетку
   if (document.fonts && document.fonts.ready) {

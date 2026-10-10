@@ -11,6 +11,28 @@ const state = {
   section: "definitions", // стартовый раздел
 };
 
+/* ---------- Добавленные пользователем записи ---------- */
+
+const LS_KEY = "keito-custom-entries";
+
+function loadCustomEntries() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+}
+
+function saveCustomEntries(list) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch { /* на file:// хранилище может быть недоступно */ }
+}
+
+const customEntries = loadCustomEntries();
+
+// Вживляем сохранённые записи в базу ДО создания кэшированной копии entries
+customEntries.forEach((e) => {
+  const copy = Object.assign({}, e);
+  delete copy.id;
+  const secs = KEITO_DATA.entries.map((x) => x.section);
+  KEITO_DATA.entries.splice(secs.lastIndexOf(e.section) + 1, 0, copy);
+});
+
 /* ---------- Подготовка данных ---------- */
 
 const entries = KEITO_DATA.entries.map((e, i) => ({
@@ -136,15 +158,61 @@ function cardHtml(e, i) {
   `;
 }
 
+/* Плашка на человека: все его штуки в одной карточке */
+function stukiGroupHtml(list) {
+  // группируем по автору в порядке первого появления в данных
+  const byAuthor = new Map();
+  list.forEach((e) => {
+    const author = e.author || "Без автора";
+    if (!byAuthor.has(author)) byAuthor.set(author, []);
+    byAuthor.get(author).push(e);
+  });
+
+  return [...byAuthor.entries()].map(([author, items], i) => `
+    <article class="card stuki-card reveal" style="transition-delay:${Math.min(i, 8) * 35}ms">
+      <div class="card-top">
+        <span class="badge" style="--h:${sectionHue.get("stuki")}">🎭 Штуки</span>
+        <span class="num">${items.length} ${plural(items.length, "штука", "штуки", "штук")}</span>
+      </div>
+      <h3 class="card-term">${escapeHtml(author)}</h3>
+      <div class="stuki-tags">
+        ${items.map((e) => `<button class="stuki-tag" data-id="${e.id}" title="${escapeHtml(e.num)}">${escapeHtml(e.num)} · ${escapeHtml(e.term)}</button>`).join("")}
+      </div>
+    </article>
+  `).join("");
+}
+
 function renderCards() {
   const box = $("#cards");
   const list = entries.filter(matches);
+  const grouped = state.section === "stuki";
 
-  box.innerHTML = list.map((e, i) => cardHtml(e, i)).join("");
+  box.innerHTML = grouped ? stukiGroupHtml(list) : list.map((e, i) => cardHtml(e, i)).join("");
 
-  box.querySelectorAll(".card").forEach((card, i) => {
-    card.addEventListener("click", () => openModal(list[i]));
-  });
+  if (grouped) {
+    const byAuthor = new Map();
+    list.forEach((e) => {
+      const author = e.author || "Без автора";
+      if (!byAuthor.has(author)) byAuthor.set(author, []);
+      byAuthor.get(author).push(e);
+    });
+    const groups = [...byAuthor.entries()];
+    box.querySelectorAll(".stuki-card").forEach((card, i) => {
+      const [author, items] = groups[i];
+      card.addEventListener("click", () => openStukiModal(author, items));
+    });
+    box.querySelectorAll(".stuki-tag").forEach((btn) => {
+      btn.addEventListener("click", (ev) => {
+        ev.stopPropagation(); // не открывать модалку всей плашки
+        const entry = entries.find((e) => e.id === btn.dataset.id);
+        if (entry) openModal(entry);
+      });
+    });
+  } else {
+    box.querySelectorAll(".card").forEach((card, i) => {
+      card.addEventListener("click", () => openModal(list[i]));
+    });
+  }
 
   // плавное появление
   const io = new IntersectionObserver(
@@ -164,12 +232,222 @@ function renderCards() {
   return list;
 }
 
+/* ---------- Графики: кольцевые диаграммы по данным записи ---------- */
+
+// Парсинг текста вида "Имя: А-30%, Б-70%"
+function parseCharts(text) {
+  return text.split("\n").map((line) => {
+    const idx = line.indexOf(":");
+    if (idx < 0) return null;
+    const name = line.slice(0, idx).trim();
+    if (!name) return null;
+    const items = line.slice(idx + 1)
+      .split(",")
+      .map((chunk) => {
+        chunk = chunk.trim();
+        const m = chunk.match(/(\d+)\s*%/);
+        if (!m) return null;
+        let label = chunk.slice(0, chunk.indexOf(m[0]));
+        label = label.replace(/[-–—]\s*$/, "").trim();
+        label = label.charAt(0).toUpperCase() + label.slice(1);
+        return { label, value: Number(m[1]) || 0 };
+      })
+      .filter(Boolean);
+    if (!items.length) return null;
+    return { name, items };
+  }).filter(Boolean);
+}
+
+// Палитра диаграмм: приглушённые «книжные» тона
+const CHART_COLORS = ["#c9821e", "#b05a3a", "#8a8a3e", "#3e7a74", "#8a5a86", "#5a6b8a", "#d3a53a", "#a8625a"];
+
+function donutSVG(person) {
+  const r = 42, C = 2 * Math.PI * r;
+  let offset = 0;
+  const slices = person.items.map((it, i) => {
+    const len = (it.value / 100) * C;
+    const seg = `<circle cx="60" cy="60" r="${r}" fill="none"
+      stroke="${CHART_COLORS[i % CHART_COLORS.length]}"
+      stroke-width="16"
+      stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}"
+      stroke-dashoffset="${(-offset).toFixed(2)}"
+      transform="rotate(-90 60 60)"></circle>`;
+    offset += len;
+    return seg;
+  }).join("");
+  return `<svg class="donut" viewBox="0 0 120 120" role="img" aria-label="${escapeHtml(person.name)}">
+    <circle cx="60" cy="60" r="${r}" fill="none" stroke="rgba(120,96,60,0.1)" stroke-width="16"></circle>
+    ${slices}
+    <text x="60" y="57" text-anchor="middle" class="donut-name">${escapeHtml(person.name)}</text>
+    <text x="60" y="72" text-anchor="middle" class="donut-sub">${person.items.length} ${plural(person.items.length, "качество", "качества", "качеств")}</text>
+  </svg>`;
+}
+
+function chartsHTML(entry) {
+  const people = parseCharts(entry.text);
+
+  // общие качества: повторяются у нескольких людей
+  const freq = new Map();
+  people.forEach((p) => p.items.forEach((it) => {
+    const k = it.label.toLowerCase();
+    freq.set(k, (freq.get(k) || 0) + 1);
+  }));
+
+  let sharedTotal = 0;
+  const html = people.map((p) => {
+    const items = [...p.items].sort((a, b) => b.value - a.value);
+    sharedTotal += items.filter((it) => (freq.get(it.label.toLowerCase()) || 0) > 1).length;
+    return `
+    <div class="chart-card">
+      ${donutSVG({ ...p, items })}
+      <ul class="legend">
+        ${items.map((it, i) => {
+          const isShared = (freq.get(it.label.toLowerCase()) || 0) > 1;
+          return `
+          <li class="${isShared ? "shared" : ""}" title="${isShared ? "Общая тема: есть и у других" : "Только у тебя"}">
+            <span class="dot" style="background:${CHART_COLORS[i % CHART_COLORS.length]}"></span>
+            <span class="legend-label">${isShared ? "✨ " : ""}${escapeHtml(it.label)}</span>
+            <span class="legend-val">${it.value}%</span>
+          </li>`;
+        }).join("")}
+      </ul>
+    </div>`;
+  }).join("");
+
+  return `
+    ${sharedTotal ? `<p class="assoc-note"><b>✨ — качества, повторяющиеся у нескольких людей.</b></p>` : ""}
+    <div class="charts-grid">${html}</div>`;
+}
+
+/* ---------- Графики: шкала мразотности ---------- */
+
+// Парсинг строк вида "Имя: 1/13", "Имя: 1 день из 13-ти", "мразь 2 через 2 дня", "мразь в високосный год"
+function parseMraz(text) {
+  return text.split("\n").map((line) => {
+    const idx = line.indexOf(":");
+    if (idx < 0) return null;
+    const name = line.slice(0, idx).trim();
+    const body = line.slice(idx + 1);
+    if (!name) return null;
+
+    let days = null, note = "";
+    let m = body.match(/1\s*\/\s*(\d+)/);
+    if (m) { days = Number(m[1]); }
+    else if ((m = body.match(/из\s*(\d+)\s*-?\s*т[иi]/)) || (m = body.match(/из\s*(\d+)/))) { days = Number(m[1]); }
+    else if (/високосн/.test(body)) { days = 1461; note = "1 раз в високосный год"; }
+    else if ((m = body.match(/(\d+)\D*(?:дн[ья]|через)/))) { days = Number(m[1]); }
+
+    if (!days || days < 1) return null;
+    const share = 100 / days;
+    const label = note || (days === 1 ? "постоянно" : `1 из ${days} дней`);
+    return { name, days, share, label, leap: !!note };
+  }).filter(Boolean).sort((a, b) => b.share - a.share);
+}
+
+function mrazHTML(entry) {
+  const people = parseMraz(entry.text);
+  const max = Math.max(...people.map((p) => p.share));
+  const least = people[people.length - 1];
+  const leader = people[0];
+  return `
+    <div class="mraz-list">
+      ${people.map((p) => `
+        <div class="mraz-row" title="Доля мразотности: ${p.share.toFixed(1)}%">
+          <span class="mraz-name">${escapeHtml(p.name)}${p === least ? " 👑" : ""}</span>
+          <div class="mraz-track">
+            <div class="mraz-fill ${p.leap ? "mraz-leap" : ""}" style="width:${Math.max((p.share / max) * 100, 1.6).toFixed(1)}%"></div>
+          </div>
+          <span class="mraz-val">${escapeHtml(p.label)}</span>
+        </div>`).join("")}
+      <p class="mraz-note">📊 Шкала: доля дней, когда человек официально мразь. 👑 — абсолютно чистый рекорд (${least.name}: ${least.label}). 🏅 ${leader.name} — лидер чести (${leader.label}).</p>
+    </div>`;
+}
+
+/* ---------- Графики: ассоциации с собой ---------- */
+
+function assocHTML(entry) {
+  const WARM_HUES = [34, 20, 42, 12, 38, 28, 16];
+  const people = entry.text.split("\n").map((line, i) => {
+    const idx = line.indexOf(":");
+    if (idx < 0) return null;
+    const name = line.slice(0, idx).trim();
+    if (!name) return null;
+    const items = line.slice(idx + 1)
+      .split(",")
+      .map((s) => s.trim().replace(/[.!?]+$/, ""))
+      .filter(Boolean)
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1));
+    return { name, items, hue: WARM_HUES[i % WARM_HUES.length] };
+  }).filter(Boolean);
+
+  // общие темы: повторяются у нескольких людей
+  const freq = new Map();
+  people.forEach((p) => p.items.forEach((t) => {
+    const k = t.toLowerCase();
+    freq.set(k, (freq.get(k) || 0) + 1);
+  }));
+
+  let sharedTotal = 0;
+  const html = people.map((p) => {
+    sharedTotal += p.items.filter((t) => (freq.get(t.toLowerCase()) || 0) > 1).length;
+    return `
+      <div class="chart-card assoc-card">
+        <div class="assoc-name" style="color:hsl(${p.hue}, 62%, 30%)">${escapeHtml(p.name)}</div>
+        <div class="chips-wrap">
+          ${p.items.map((t) => {
+            const isShared = (freq.get(t.toLowerCase()) || 0) > 1;
+            return `<span class="assoc-chip ${isShared ? "shared" : ""}" style="--h:${p.hue}" title="${isShared ? "Общая тема не только у тебя" : "Уникальная ассоциация"}">${isShared ? "✨ " : ""}${escapeHtml(t)}</span>`;
+          }).join("")}
+        </div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="assoc-note">${sharedTotal ? `<b>✨ — ответы, которые повторяются у нескольких людей.</b>` : ""}</div>
+    <div class="charts-grid">${html}</div>`;
+}
+
+/* ---------- Модалка «Штуки человека»: список всех штук ---------- */
+
+let lastModalList = null;
+
+function openStukiModal(author, items) {
+  lastModalEntry = null;
+  lastModalList = items;
+  const s = sectionById.get("stuki");
+  $("#modalContent").innerHTML = `
+    <div class="card-top">
+      <span class="badge" style="--h:${sectionHue.get("stuki")}">${s ? s.icon + " " + escapeHtml(s.name) : "Штуки"}</span>
+      <span class="num">${items.length} ${plural(items.length, "штука", "штуки", "штук")}</span>
+    </div>
+    <h2 class="modal-term">${escapeHtml(author)}</h2>
+    <ul class="stuki-modal-list">
+      ${items.map((e) => `
+        <li>
+          <button class="stuki-modal-item" data-id="${e.id}">
+            <span class="stuki-modal-num">${escapeHtml(e.num)}</span>
+            <span class="stuki-modal-text">${escapeHtml(e.term)}</span>
+          </button>
+        </li>`).join("")}
+    </ul>
+  `;
+  $("#modalContent").querySelectorAll(".stuki-modal-item").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const entry = entries.find((e) => e.id === btn.dataset.id);
+      if (entry) openModal(entry);
+    });
+  });
+  $("#modalBackdrop").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
 /* ---------- Модалка ---------- */
 
 let lastModalEntry = null;
 
 function openModal(entry) {
   lastModalEntry = entry;
+  lastModalList = null;
   const s = sectionById.get(entry.section);
   $("#modalContent").innerHTML = `
     <div class="card-top">
@@ -177,8 +455,11 @@ function openModal(entry) {
       <span class="num">№ ${escapeHtml(entry.num)}</span>
     </div>
     <h2 class="modal-term">${escapeHtml(entry.term)}</h2>
-    ${cardText(entry) ? `<p class="modal-text">${escapeHtml(cardText(entry))}</p>` : ""}
-    ${entry.example && entry.text ? `<p class="modal-text card-author">Пример: ${escapeHtml(entry.example)}</p>` : ""}
+    ${entry.charts && entry.text ? chartsHTML(entry) : ""}
+    ${entry.mraz && entry.text ? mrazHTML(entry) : ""}
+    ${entry.assoc && entry.text ? assocHTML(entry) : ""}
+    ${!entry.charts && !entry.mraz && !entry.assoc && cardText(entry) ? `<p class="modal-text">${escapeHtml(cardText(entry))}</p>` : ""}
+    ${entry.charts && entry.example ? `<p class="modal-text card-author">Пример: ${escapeHtml(entry.example)}</p>` : ""}
     ${entry.author ? `<p class="modal-author">Автор - ${escapeHtml(entry.author)}</p>` : ""}
   `;
   $("#modalBackdrop").hidden = false;
@@ -191,10 +472,17 @@ function closeModal() {
 }
 
 function copyCurrent() {
-  if (!lastModalEntry) return;
-  const e = lastModalEntry;
-  const parts = [e.term, cardText(e), e.author ? "Автор - " + e.author : null].filter(Boolean);
-  const text = parts.join("\n") + "\n\n· Кейтопедия";
+  let text;
+  if (lastModalList) {
+    // копируем весь список штук человека
+    text = lastModalList.map((e) => `${e.num}. ${e.term}`).join("\n") + "\n\n· Кейтопедия";
+  } else if (lastModalEntry) {
+    const e = lastModalEntry;
+    text = [e.term, cardText(e), e.author ? "Автор - " + e.author : null]
+      .filter(Boolean).join("\n") + "\n\n· Кейтопедия";
+  } else {
+    return;
+  }
   copyToClipboard(text).then(() => toast("📋 Скопировано"));
 }
 
@@ -270,6 +558,150 @@ function pointerGlow() {
   card.addEventListener("pointerleave", () => { tx = 0; ty = 0; kick(); });
 }
 
+/* ---------- Добавление записи и экспорт data.js ---------- */
+
+function nextNumFor(section, author) {
+  const same = KEITO_DATA.entries.filter((e) => e.section === section);
+
+  // В разделах с префиксной нумерацией (К1, Э2, Мр7…) продолжаем префикс автора
+  if (author) {
+    const own = same.filter((e) => e.author === author);
+    if (own.length) {
+      const found = own.map((e) => e.num.match(/^(\D+)(\d+)$/)).reverse().find(Boolean);
+      if (found) return found[1].trim() + (Number(found[2]) + 1);
+    }
+  }
+
+  const nums = same
+    .map((e) => Number(e.num))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return String(nums.length ? Math.max(...nums) + 1 : 1);
+}
+
+function openAddDialog() {
+  const sel = $("#addSection");
+  if (!sel.options.length) {
+    sel.innerHTML = KEITO_DATA.sections
+      .map((s) => `<option value="${s.id}">${escapeHtml(s.icon + " " + s.name)}</option>`)
+      .join("");
+  }
+  sel.value = state.section !== "all" ? state.section : KEITO_DATA.sections[0].id;
+  $("#addTerm").value = "";
+  $("#addText").value = "";
+  $("#addAuthor").value = "";
+  $("#addBackdrop").hidden = false;
+  document.body.style.overflow = "hidden";
+  $("#addTerm").focus();
+}
+
+function closeAddDialog() {
+  $("#addBackdrop").hidden = true;
+  document.body.style.overflow = "";
+}
+
+function handleAddSubmit(ev) {
+  ev.preventDefault();
+
+  const raw = {
+    section: $("#addSection").value,
+    term: $("#addTerm").value.trim(),
+  };
+  if (!raw.term) return;
+  const text = $("#addText").value.trim();
+  const author = $("#addAuthor").value.trim();
+  if (text) raw.text = text;
+  if (author) raw.author = author;
+  raw.num = nextNumFor(raw.section, raw.author);
+
+  // вставляем сразу после последней записи этого раздела
+  const secs = KEITO_DATA.entries.map((x) => x.section);
+  KEITO_DATA.entries.splice(secs.lastIndexOf(raw.section) + 1, 0, raw);
+
+  // запоминаем для перезагрузок (localStorage) и экспорта data.js
+  customEntries.push(raw);
+  saveCustomEntries(customEntries);
+
+  // добавляем в кэш-копию для рендера
+  entries.push(Object.assign(Object.assign({}, raw), { id: "e" + (entries.length + 1) }));
+
+  closeAddDialog();
+  toast("✅ Запись добавлена");
+  state.section = raw.section; // показать раздел с новой записью
+  renderAll();
+  lastSavedNote = raw.term;
+  persistData();               // авто-сохранение в data.js + GitHub
+}
+
+function dataFileContent() {
+  const pretty = JSON.stringify({
+    meta: KEITO_DATA.meta,
+    sections: KEITO_DATA.sections,
+    entries: KEITO_DATA.entries,
+  }, null, 2);
+  return "/* ============================================================\n"
+    + "   КЕЙТОПЕДИЯ — данные\n"
+    + "   ============================================================ */\n\n"
+    + "const KEITO_DATA = " + pretty + ";\n";
+}
+
+var lastSavedNote = ""; // попадёт в комментарий коммита GitHub
+
+/* Попытка отправить текущие данные в файл data.js через локальный сервер.
+   Если сервер не запущен (страница открыта через file://) — тихо откатываемся
+   к сохранению в браузере и кнопке «💾». */
+async function saveDataToServer() {
+  const res = await fetch("/api/save-data", {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8",
+      "X-Keito-Note": lastSavedNote ? encodeURIComponent(lastSavedNote) : "auto-save",
+    },
+    body: dataFileContent(),
+  });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+
+function persistData() {
+  saveDataToServer()
+    .then((info) => {
+      // записи теперь в файле — чтобы не задвоились при следующей загрузке
+      customEntries.length = 0;
+      saveCustomEntries(customEntries);
+      if (info.pushed) toast("💾 Сохранено в data.js и отправлено на GitHub");
+      else if (info.reason === "не настроен") toast("💾 Сохранено в data.js (GitHub ещё не настроен)");
+      else toast("💾 Сохранено в data.js, но GitHub не принял: " + info.reason);
+    })
+    .catch(() => {
+      toast("⚠️ Запись добавлена. Сервер не запущен (start.bat) — пока хранится только в браузере");
+    });
+}
+
+function exportData() {
+  saveDataToServer()
+    .then((info) => {
+      customEntries.length = 0;
+      saveCustomEntries(customEntries);
+      if (info.pushed) toast("💾 Сохранено в data.js и отправлено на GitHub");
+      else if (info.reason === "не настроен") toast("💾 Сохранено в data.js (GitHub ещё не настроен)");
+      else toast("💾 Сохранено в data.js, но GitHub не принял: " + info.reason);
+    })
+    .catch(() => {
+      // сервер недоступен — скачиваем файл, как раньше
+      const blob = new Blob([dataFileContent()], { type: "text/javascript;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "data.js";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      customEntries.length = 0;
+      saveCustomEntries(customEntries);
+      toast("💾 data.js скачан — замени им старый файл в папке сайта");
+    });
+}
+
 /* ---------- Сборка ---------- */
 
 function renderAll() {
@@ -279,8 +711,9 @@ function renderAll() {
 
 function bindEvents() {
   document.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" && !$("#modalBackdrop").hidden) {
-      closeModal();
+    if (ev.key === "Escape") {
+      if (!$("#modalBackdrop").hidden) closeModal();
+      if (!$("#addBackdrop").hidden) closeAddDialog();
     }
   });
 
@@ -290,6 +723,14 @@ function bindEvents() {
   $("#modalBackdrop").addEventListener("click", (ev) => {
     if (ev.target === $("#modalBackdrop")) closeModal();
   });
+
+  $("#addBtn").onclick = openAddDialog;
+  $("#addClose").onclick = closeAddDialog;
+  $("#addBackdrop").addEventListener("click", (ev) => {
+    if (ev.target === $("#addBackdrop")) closeAddDialog();
+  });
+  $("#addForm").addEventListener("submit", handleAddSubmit);
+  $("#exportBtn").onclick = exportData;
 
   const reset = () => {
     state.section = "all";

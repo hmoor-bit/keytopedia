@@ -1106,6 +1106,11 @@ const KEITO_DATA = {
       "section": "matyuhi",
       "num": "5",
       "term": "Блевал вчера"
+    },
+    {
+      "term": "Тест согласия",
+      "section": "matyuhi",
+      "num": "6"
     }
   ]
 };

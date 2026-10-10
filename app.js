@@ -599,16 +599,11 @@ function nextNumFor(section, author) {
 
 function openAddDialog() {
   const inp = $("#addSection");
-  const list = $("#keitoSectionList");
-  // список существующих разделов обновляем каждый раз (мог появиться новый)
-  if (list) {
-    list.innerHTML = KEITO_DATA.sections
-      .map((s) => `<option value="${escapeHtml(s.name)}"></option>`)
-      .join("");
-  }
+  rebuildDerivedData(); // актуальные разделы для меню
   inp.value = state.section !== "all"
     ? (sectionById.get(state.section) || KEITO_DATA.sections[0]).name
     : KEITO_DATA.sections[0].name;
+  closeSectionMenu();
   $("#addTerm").value = "";
   $("#addText").value = "";
   $("#addAuthor").value = "";
@@ -643,6 +638,107 @@ function showConfirm(text) {
     cancel.onclick = () => finish(false);
     bd.onclick = (ev) => { if (ev.target === bd) finish(false); };
   });
+}
+
+/* ---------- Комбо-выбор раздела ---------- */
+
+let comboIndex = -1; // подсвеченный пункт меню
+
+function sectionMenuOpen() {
+  return !$("#sectionMenu").hidden;
+}
+
+function closeSectionMenu() {
+  const menu = $("#sectionMenu");
+  menu.hidden = true;
+  menu.innerHTML = "";
+  comboIndex = -1;
+}
+
+function renderSectionMenu() {
+  const inp = $("#addSection");
+  const menu = $("#sectionMenu");
+  const filter = inp.value.trim().toLowerCase();
+
+  const sections = KEITO_DATA.sections.filter((s) =>
+    !filter || s.name.toLowerCase().includes(filter));
+
+  const exactExists = KEITO_DATA.sections.some((s) => s.name.toLowerCase() === filter);
+  let html = sections.map((s) =>
+    `<button type="button" class="combo-item" data-name="${escapeHtml(s.name)}">` +
+    `<span class="combo-icon">${escapeHtml(s.icon)}</span>` +
+    `<span class="combo-name">${escapeHtml(s.name)}</span></button>`).join("");
+
+  // если введённое имя — не существующий раздел, предлагаем создать
+  if (filter && !exactExists) {
+    html += `<button type="button" class="combo-item combo-create" data-new="${escapeHtml($("#addSection").value.trim())}">` +
+      `<span class="combo-icon">➕</span>` +
+      `<span class="combo-name">Создать раздел «${escapeHtml($("#addSection").value.trim())}»</span></button>`;
+  }
+
+  if (!html) {
+    menu.innerHTML = `<div class="combo-empty">Нет разделов по запросу</div>`;
+  } else {
+    menu.innerHTML = html;
+    comboIndex = -1;
+  }
+  menu.hidden = false;
+}
+
+function comboHighlight(delta) {
+  const items = [...document.querySelectorAll("#sectionMenu .combo-item")];
+  if (!items.length) return;
+  comboIndex = (comboIndex + delta + items.length) % items.length;
+  items.forEach((el, i) => el.classList.toggle("active", i === comboIndex));
+  items[comboIndex].scrollIntoView({ block: "nearest" });
+}
+
+function comboPick(el) {
+  const inp = $("#addSection");
+  const name = el.dataset.name || el.dataset.new;
+  if (name) inp.value = name;
+  closeSectionMenu();
+}
+
+function bindSectionCombo() {
+  const inp = $("#addSection");
+  const menu = $("#sectionMenu");
+
+  inp.addEventListener("focus", () => renderSectionMenu());
+  inp.addEventListener("input", () => renderSectionMenu());
+
+  inp.addEventListener("keydown", (ev) => {
+    if (!sectionMenuOpen()) return;
+    if (ev.key === "ArrowDown") { ev.preventDefault(); comboHighlight(1); }
+    else if (ev.key === "ArrowUp") { ev.preventDefault(); comboHighlight(-1); }
+    else if (ev.key === "Enter") {
+      ev.preventDefault();
+      const items = [...menu.querySelectorAll(".combo-item")];
+      if (comboIndex >= 0 && items[comboIndex]) comboPick(items[comboIndex]);
+      else {
+        // точное совпадение или перый пункт / создание
+        const filter = inp.value.trim().toLowerCase();
+        const exact = items.find((b) => (b.dataset.name || "").toLowerCase() === filter);
+        comboPick(exact || items[0] || {});
+      }
+    }
+    else if (ev.key === "Escape") { closeSectionMenu(); }
+  });
+
+  menu.addEventListener("mousedown", (ev) => ev.preventDefault()); // чтобы поле не теряло фокус
+  menu.addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".combo-item");
+    if (btn) comboPick(btn);
+  });
+
+  // клик мимо меню — закрыть
+  document.addEventListener("click", (ev) => {
+    if (!sectionMenuOpen()) return;
+    if (ev.target.closest("#sectionCombo") || ev.target.closest("#sectionMenu")) return;
+    closeSectionMenu();
+  });
+  // закрытие при прокрутке/скролле за пределами формы
+  window.addEventListener("resize", closeSectionMenu);
 }
 
 function handleAddSubmit(ev) {
@@ -895,6 +991,7 @@ function bindEvents() {
     if (ev.target === $("#addBackdrop")) closeAddDialog();
   });
   $("#addForm").addEventListener("submit", handleAddSubmit);
+  bindSectionCombo();
 
   const reset = () => {
     state.section = "all";

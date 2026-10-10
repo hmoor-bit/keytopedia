@@ -23,6 +23,7 @@
         <span class="logo-icon">К</span>
         <span class="logo-text">Кейто<span class="grad">педия</span></span>
       </button>
+      <p class="header-note">Собрано из заметок Эрика в телефоне.</p>
     </div>
   </header>
 
@@ -50,6 +51,8 @@
         <div class="seg-pill" id="segPill" aria-hidden="true"></div>
         <!-- сегменты добавит app.js -->
       </div>
+      <button class="add-btn" id="addBtn" title="Добавить новую запись">+</button>
+      <button class="add-btn add-btn-disk" id="exportBtn" title="Скачать обновлённый data.js со всеми добавленными записями">💾</button>
     </section>
 
     <!-- Карточки -->
@@ -66,7 +69,6 @@
   <footer class="site-footer">
     <div class="container">
       <p>Кейтопедия © <span id="year"></span></p>
-      <p class="footer-note">Собрано из заметок Эрика в телефоне.</p>
     </div>
   </footer>
 
@@ -81,9 +83,38 @@
     </div>
   </div>
 
+  <!-- Диалог добавления записи -->
+  <div class="modal-backdrop" id="addBackdrop" hidden>
+    <div class="modal panel-gradient" role="dialog" aria-modal="true" aria-label="Новая запись">
+      <button class="modal-close" id="addClose" aria-label="Закрыть">×</button>
+      <div id="addContent">
+        <h2 class="modal-term">Новая запись</h2>
+        <form id="addForm" class="add-form">
+          <label>
+            <span>Раздел</span>
+            <select id="addSection"></select>
+          </label>
+          <label>
+            <span>Название *</span>
+            <input id="addTerm" required placeholder="Например: Набомбурилось">
+          </label>
+          <label>
+            <span>Описание</span>
+            <textarea id="addText" rows="3" placeholder="Формулировка или история"></textarea>
+          </label>
+          <label>
+            <span>Автор</span>
+            <input id="addAuthor" placeholder="Кто придумал">
+          </label>
+          <button type="submit" class="btn btn-add-submit">✅ Добавить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" hidden></div>
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <script src="data.js?v=2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

@@ -67,9 +67,19 @@ const KEITO_DATA = {
       "id": "madama",
       "name": "Я мадама",
       "icon": "👑"
+    },
+    {
+      "id": "smv26ahe56h",
+      "name": "Смешные прозвища",
+      "icon": "🗂️"
     }
   ],
   "entries": [
+    {
+      "term": "Тест нового раздела",
+      "section": "smv26ahe56h",
+      "num": "1"
+    },
     {
       "section": "definitions",
       "num": "1",

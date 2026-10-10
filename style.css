@@ -692,6 +692,88 @@ button { font: inherit; color: inherit; cursor: pointer; }
   align-self: flex-start;
 }
 
+/* ---------- Комбо-выбор раздела ---------- */
+
+.combo { position: relative; }
+
+.combo input {
+  width: 100%;
+  cursor: pointer;
+}
+
+.combo.menu-open input {
+  border-color: hsl(28, 60%, 74%);
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.combo-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 60;
+  max-height: 240px;
+  overflow-y: auto;
+  background: #fffdf8;
+  border: 1px solid hsl(28, 35%, 84%);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(93, 72, 40, 0.16);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.combo-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 11px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.combo-item:hover,
+.combo-item.active {
+  background: hsl(28, 60%, 92%);
+}
+
+.combo-icon {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: hsl(28, 50%, 91%);
+  font-size: 14px;
+}
+
+.combo-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.combo-create .combo-icon { background: hsl(160, 35%, 90%); }
+.combo-create .combo-name { color: hsl(160, 40%, 30%); font-weight: 650; }
+
+.combo-empty {
+  padding: 14px 11px;
+  color: var(--muted);
+  font-size: 13.5px;
+  text-align: center;
+}
+
 /* ---------- Диалог подтверждения ---------- */
 
 .confirm-backdrop { z-index: 120; }

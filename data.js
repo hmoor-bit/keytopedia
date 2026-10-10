@@ -295,13 +295,6 @@ const KEITO_DATA = {
       "text": "На всё согласная."
     },
     {
-      "section": "definitions",
-      "term": "Записано с сайта",
-      "text": "Проверка добавления прямо со страниц GitHub",
-      "author": "Тест",
-      "num": "32"
-    },
-    {
       "section": "kaitorizmy",
       "num": "1",
       "term": "Надо выебываться, когда позволяет случай",

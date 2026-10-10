@@ -295,12 +295,6 @@ const KEITO_DATA = {
       "text": "На всё согласная."
     },
     {
-      "section": "definitions",
-      "term": "Тестовая запись Гитхаб",
-      "author": "Эрик",
-      "num": "32"
-    },
-    {
       "section": "kaitorizmy",
       "num": "1",
       "term": "Надо выебываться, когда позволяет случай",

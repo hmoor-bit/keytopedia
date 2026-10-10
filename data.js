@@ -67,19 +67,9 @@ const KEITO_DATA = {
       "id": "madama",
       "name": "Я мадама",
       "icon": "👑"
-    },
-    {
-      "id": "smv26ahe56h",
-      "name": "Смешные прозвища",
-      "icon": "🗂️"
     }
   ],
   "entries": [
-    {
-      "term": "Тест нового раздела",
-      "section": "smv26ahe56h",
-      "num": "1"
-    },
     {
       "section": "definitions",
       "num": "1",
@@ -303,13 +293,6 @@ const KEITO_DATA = {
       "term": "Всёравношная",
       "author": "Мари",
       "text": "На всё согласная."
-    },
-    {
-      "section": "definitions",
-      "term": "добавил новое",
-      "text": "тест",
-      "author": "Я",
-      "num": "32"
     },
     {
       "section": "kaitorizmy",
@@ -766,11 +749,6 @@ const KEITO_DATA = {
       "num": "Л3",
       "term": "Клуб любителей посчитать",
       "author": "Линк"
-    },
-    {
-      "term": "Тест существующий раздел",
-      "section": "stuki",
-      "num": "1"
     },
     {
       "section": "perly",

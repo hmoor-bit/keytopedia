@@ -651,8 +651,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .add-btn:active { transform: translateY(0); }
 
-.add-btn-disk { font-size: 17px; }
-
 /* ---------- Форма добавления записи ---------- */
 
 .add-form {

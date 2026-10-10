@@ -296,8 +296,8 @@ const KEITO_DATA = {
     },
     {
       "section": "definitions",
-      "term": "тест добавления",
-      "text": "Новое",
+      "term": "добавил новое",
+      "text": "тест",
       "author": "Я",
       "num": "32"
     },

@@ -295,6 +295,13 @@ const KEITO_DATA = {
       "text": "На всё согласная."
     },
     {
+      "section": "definitions",
+      "term": "тест добавления",
+      "text": "Новое",
+      "author": "Я",
+      "num": "32"
+    },
+    {
       "section": "kaitorizmy",
       "num": "1",
       "term": "Надо выебываться, когда позволяет случай",

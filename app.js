@@ -598,13 +598,17 @@ function nextNumFor(section, author) {
 }
 
 function openAddDialog() {
-  const sel = $("#addSection");
-  if (!sel.options.length) {
-    sel.innerHTML = KEITO_DATA.sections
-      .map((s) => `<option value="${s.id}">${escapeHtml(s.icon + " " + s.name)}</option>`)
+  const inp = $("#addSection");
+  const list = $("#keitoSectionList");
+  // список существующих разделов обновляем каждый раз (мог появиться новый)
+  if (list) {
+    list.innerHTML = KEITO_DATA.sections
+      .map((s) => `<option value="${escapeHtml(s.name)}"></option>`)
       .join("");
   }
-  sel.value = state.section !== "all" ? state.section : KEITO_DATA.sections[0].id;
+  inp.value = state.section !== "all"
+    ? (sectionById.get(state.section) || KEITO_DATA.sections[0]).name
+    : KEITO_DATA.sections[0].name;
   $("#addTerm").value = "";
   $("#addText").value = "";
   $("#addAuthor").value = "";
@@ -621,15 +625,36 @@ function closeAddDialog() {
 function handleAddSubmit(ev) {
   ev.preventDefault();
 
-  const raw = {
-    section: $("#addSection").value,
-    term: $("#addTerm").value.trim(),
-  };
+  const raw = { term: $("#addTerm").value.trim() };
   if (!raw.term) return;
   const text = $("#addText").value.trim();
   const author = $("#addAuthor").value.trim();
   if (text) raw.text = text;
   if (author) raw.author = author;
+
+  // Раздел: существующий по названию или новый
+  const inputName = $("#addSection").value.trim();
+  if (!inputName) return;
+  const byName = new Map(KEITO_DATA.sections.map((s) => [s.name.toLowerCase(), s]));
+  const existing = byName.get(inputName.toLowerCase());
+  if (existing) {
+    raw.section = existing.id;
+  } else {
+    // новый раздел — в конец списка
+    const icon = "🗂️";
+    const section = {
+      id: "s" + Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36),
+      name: inputName,
+      icon: icon,
+    };
+    KEITO_DATA.sections.push(section);
+    raw.section = section.id;
+  }
+
+  if (!window.confirm("Добавить новую запись?")) return;
+
+  rebuildDerivedData(); // после возможного создания раздела
+
   raw.num = nextNumFor(raw.section, raw.author);
 
   // вставляем сразу после последней записи этого раздела

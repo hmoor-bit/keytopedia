@@ -658,9 +658,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   flex-direction: column;
   gap: 12px;
   margin-top: 16px;
-}
-
-.add-form label {
+}.add-form label {
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -693,6 +691,37 @@ button { font: inherit; color: inherit; cursor: pointer; }
   margin-top: 4px;
   align-self: flex-start;
 }
+
+/* ---------- Диалог подтверждения ---------- */
+
+.confirm-backdrop { z-index: 120; }
+
+.confirm-modal {
+  width: min(420px, 100%);
+  text-align: center;
+  padding: 34px 28px 26px;
+}
+
+.confirm-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 14px;
+}
+
+.confirm-text {
+  font-family: var(--font-display);
+  font-size: 19px;
+  color: var(--text);
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.confirm-btn { min-width: 140px; justify-content: center; }
 
 /* появление карточек */
 .reveal {

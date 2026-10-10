@@ -302,6 +302,13 @@ const KEITO_DATA = {
       "num": "32"
     },
     {
+      "section": "definitions",
+      "term": "тест 2",
+      "text": "йоу",
+      "author": "Кто-то",
+      "num": "33"
+    },
+    {
       "section": "kaitorizmy",
       "num": "1",
       "term": "Надо выебываться, когда позволяет случай",

@@ -90,8 +90,9 @@
         <h2 class="modal-term">Новая запись</h2>
         <form id="addForm" class="add-form">
           <label>
-            <span>Раздел</span>
-            <select id="addSection"></select>
+            <span>Раздел (вводи и уникальное имя нового раздела)</span>
+            <input id="addSection" list="keitoSectionList" required placeholder="Выбери или введи название раздела" autocomplete="off">
+            <datalist id="keitoSectionList"></datalist>
           </label>
           <label>
             <span>Название *</span>

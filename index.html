@@ -90,9 +90,11 @@
         <h2 class="modal-term">Новая запись</h2>
         <form id="addForm" class="add-form">
           <label>
-            <span>Раздел (вводи и уникальное имя нового раздела)</span>
-            <input id="addSection" list="keitoSectionList" required placeholder="Выбери или введи название раздела" autocomplete="off">
-            <datalist id="keitoSectionList"></datalist>
+            <span>Раздел (выбери существующий или введи новый)</span>
+            <div class="combo" id="sectionCombo">
+              <input id="addSection" required placeholder="Выбери или введи название раздела" autocomplete="off" spellcheck="false">
+              <div class="combo-menu" id="sectionMenu" hidden></div>
+            </div>
           </label>
           <label>
             <span>Название *</span>
@@ -126,8 +128,8 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script src="site-config.js?v=2"></script>
-  <script src="data.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="site-config.js?v=3"></script>
+  <script src="data.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

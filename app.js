@@ -9,6 +9,8 @@ const $ = (sel) => document.querySelector(sel);
 
 const state = {
   section: "definitions", // стартовый раздел
+  sectionBeforeSearch: "definitions", // куда вернуться после сброса поиска
+  query: "", // активный поисковый запрос
 };
 
 /* ---------- Добавленные пользователем записи ---------- */
@@ -84,9 +86,23 @@ function escapeHtml(str) {
     .replaceAll('"', A + "quot;");
 }
 
+function entryMatchesQuery(e) {
+  const q = state.query.trim().toLowerCase();
+  if (!q) return true;
+  return [e.term, e.text, e.example, e.author, e.num]
+    .some((v) => v && String(v).toLowerCase().includes(q));
+}
+
 function matches(entry) {
-  if (state.section !== "all" && entry.section !== state.section) return false;
-  return true;
+  // активный поиск ищет по всему словарю, независимо от выбранного раздела
+  if (!state.query && state.section !== "all" && entry.section !== state.section) return false;
+  return entryMatchesQuery(entry);
+}
+
+function sectionHasMatches(sectionId) {
+  const q = state.query.trim().toLowerCase();
+  if (!q) return true;
+  return entries.some((e) => e.section === sectionId && entryMatchesQuery(e));
 }
 
 function plural(n, one, few, many) {
@@ -116,7 +132,13 @@ function renderSectionChips() {
   // Только тематические разделы, без «Всё-всё»
   $("#segWrap").innerHTML = '<div class="seg-pill" id="segPill" aria-hidden="true"></div>' + KEITO_DATA.sections.map((s) => {
     const c = counts.get(s.id) || 0;
-    return `<button class="seg-item ${state.section === s.id ? "active" : ""} ${c === 0 ? "dim" : ""}" data-section="${s.id}">
+    // при активном поиске приглушаем разделы без совпадений
+    const searchDim = state.query && !sectionHasMatches(s.id);
+    const cls = [
+      state.section === s.id && !state.query ? "active" : "",
+      (c === 0 || searchDim) ? "dim" : "",
+    ].filter(Boolean).join(" ");
+    return `<button class="seg-item ${cls}" data-section="${s.id}">
       <span>${s.icon} ${escapeHtml(s.name)}</span><span class="cnt">${c}</span>
     </button>`;
   }).join("");
@@ -162,6 +184,23 @@ function cardText(e) {
   return e.text || (e.example ? "Пример: " + e.example : "");
 }
 
+/* Подсветка поискового запроса в тексте (экранирование не ломается) */
+function highlightMatch(str) {
+  const text = String(str || "");
+  const q = state.query.trim().toLowerCase();
+  if (!q) return escapeHtml(text);
+  const low = text.toLowerCase();
+  let out = "", i = 0;
+  while (true) {
+    const pos = low.indexOf(q, i);
+    if (pos === -1) { out += escapeHtml(text.slice(i)); break; }
+    out += escapeHtml(text.slice(i, pos))
+      + "<mark>" + escapeHtml(text.slice(pos, pos + q.length)) + "</mark>";
+    i = pos + q.length;
+  }
+  return out;
+}
+
 function cardHtml(e, i) {
   const s = sectionById.get(e.section);
   return `
@@ -170,9 +209,9 @@ function cardHtml(e, i) {
         <span class="badge" style="--h:${sectionHue.get(e.section)}">${s ? s.icon + " " + escapeHtml(s.name) : "Записи"}</span>
         <span class="num">№ ${escapeHtml(e.num)}</span>
       </div>
-      <h3 class="card-term">${escapeHtml(e.term)}</h3>
-      ${cardText(e) ? `<p class="card-text">${escapeHtml(cardText(e))}</p>` : ""}
-      ${e.author ? `<div class="card-author">Автор - ${escapeHtml(e.author)}</div>` : ""}
+      <h3 class="card-term">${highlightMatch(e.term)}</h3>
+      ${cardText(e) ? `<p class="card-text">${highlightMatch(cardText(e))}</p>` : ""}
+      ${e.author ? `<div class="card-author">Автор - ${highlightMatch(e.author)}</div>` : ""}
     </article>
   `;
 }
@@ -193,9 +232,9 @@ function stukiGroupHtml(list) {
         <span class="badge" style="--h:${sectionHue.get("stuki")}">🎭 Штуки</span>
         <span class="num">${items.length} ${plural(items.length, "штука", "штуки", "штук")}</span>
       </div>
-      <h3 class="card-term">${escapeHtml(author)}</h3>
+      <h3 class="card-term">${highlightMatch(author)}</h3>
       <div class="stuki-tags">
-        ${items.map((e) => `<button class="stuki-tag" data-id="${e.id}" title="${escapeHtml(e.num)}">${escapeHtml(e.num)} · ${escapeHtml(e.term)}</button>`).join("")}
+        ${items.map((e) => `<button class="stuki-tag" data-id="${e.id}" title="${escapeHtml(e.num)}">${highlightMatch(e.num)} · ${highlightMatch(e.term)}</button>`).join("")}
       </div>
     </article>
   `).join("");
@@ -204,7 +243,8 @@ function stukiGroupHtml(list) {
 function renderCards() {
   const box = $("#cards");
   const list = entries.filter(matches);
-  const grouped = state.section === "stuki";
+  // при активном поиске показываем обычные карточки с бейджами разделов
+  const grouped = state.section === "stuki" && !state.query;
 
   box.innerHTML = grouped ? stukiGroupHtml(list) : list.map((e, i) => cardHtml(e, i)).join("");
 
@@ -246,6 +286,12 @@ function renderCards() {
   box.querySelectorAll(".reveal").forEach((el) => io.observe(el));
 
   $("#emptyState").hidden = list.length > 0;
+  const emptyMsg = $("#emptyState p");
+  if (emptyMsg) {
+    emptyMsg.textContent = state.query
+      ? `Ничего не нашлось по запросу «${state.query.trim()}».`
+      : "Ничего не найдено. Такой книги у нас пока нет.";
+  }
   renderStats(entries.length, list.length);
 
   return list;
@@ -1004,6 +1050,44 @@ function bindEvents() {
   };
   $("#resetBtn").onclick = reset;
   $("#logoBtn").onclick = reset;
+
+  /* ---------- Поиск ---------- */
+  const searchInput = $("#searchInput");
+  const searchClear = $("#searchClear");
+  let searchTimer = null;
+
+  function applySearch(value) {
+    const q = value.trim();
+    // при первом вводе запоминаем раздел, при очистке возвращаемся в него
+    if (q && !state.query) state.sectionBeforeSearch = state.section;
+    state.query = q;
+    if (!q) state.section = state.sectionBeforeSearch || state.section;
+    searchClear.hidden = !q;
+    renderAll();
+  }
+
+  searchInput.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    const value = searchInput.value;
+    searchTimer = setTimeout(() => applySearch(value), 160); // ждём паузу в наборе
+  });
+
+  searchInput.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape") {
+      if (searchInput.value) {
+        searchInput.value = "";
+        clearTimeout(searchTimer);
+        applySearch("");
+      }
+    }
+  });
+
+  searchClear.onclick = () => {
+    searchInput.value = "";
+    clearTimeout(searchTimer);
+    applySearch("");
+    searchInput.focus();
+  };
 }
 
 function init() {

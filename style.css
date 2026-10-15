@@ -620,13 +620,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .stuki-modal-text { font-size: 14.5px; color: hsl(28, 55%, 28%); }
 
-/* ---------- Кнопки «+» и «💾» ---------- */
+/* ---------- Кнопки «+» и поиск ---------- */
 
 .chipbar {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 18px 0;
+}
+
+.segwrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .searchbox { order: -1; flex: 1 1 100%; }
+  .segwrap { order: 1; }
+  .add-btn { order: 2; }
 }
 
 .add-btn {
@@ -650,6 +661,64 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 .add-btn:active { transform: translateY(0); }
+
+/* ---------- Поиск ---------- */
+
+.searchbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 0 1 300px;
+  padding: 7px 11px;
+  border-radius: 14px;
+  background: #fffdf8;
+  border: 1px solid hsl(28, 35%, 84%);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.searchbox:focus-within {
+  border-color: hsl(28, 60%, 74%);
+  box-shadow: 0 4px 16px rgba(176, 106, 26, 0.14);
+}
+
+.search-icon { font-size: 14px; opacity: 0.65; flex: 0 0 auto; }
+
+.searchbox input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.searchbox input::placeholder { color: #b6a893; }
+.searchbox input:focus { outline: none; }
+
+.search-clear {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  line-height: 1;
+  border: none;
+  border-radius: 999px;
+  background: hsl(28, 50%, 90%);
+  color: hsl(28, 45%, 40%);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.search-clear:hover { background: hsl(28, 65%, 84%); }
+
+mark {
+  background: hsl(34, 85%, 80%);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 4px;
+}
 
 /* ---------- Форма добавления записи ---------- */
 
